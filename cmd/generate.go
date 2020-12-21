@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/lorislab/changelog/changelog"
+	changelog "github.com/lorislab/changelog/api"
 	"github.com/lorislab/changelog/github"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

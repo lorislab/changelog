@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/google/go-github/v33/github"
-	"github.com/lorislab/changelog/changelog"
+	changelog "github.com/lorislab/changelog/api"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
