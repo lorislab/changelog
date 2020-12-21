@@ -109,7 +109,10 @@ func addFlagR(command *cobra.Command, name, shorthand, value, usage string) *pfl
 func addFlagExt(command *cobra.Command, name, shorthand, value, usage string, required bool) *pflag.Flag {
 	command.Flags().StringP(name, shorthand, value, usage)
 	if required {
-		command.MarkFlagRequired(name)
+		err := command.MarkFlagRequired(name)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 	return addViper(command, name)
 }
