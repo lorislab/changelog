@@ -2,36 +2,36 @@ package github
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/google/go-github/v33/github"
 	"github.com/lorislab/changelog/changelog"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
 
-type GitHubItem struct {
+type gitHubItem struct {
 	Issue *github.Issue
 }
 
 // GetID of the github issue
-func (g GitHubItem) GetID() string {
+func (g gitHubItem) GetID() string {
 	return strconv.Itoa(g.Issue.GetNumber())
 }
 
 // GetURL of the github issue
-func (g GitHubItem) GetURL() string {
+func (g gitHubItem) GetURL() string {
 	return g.Issue.GetURL()
 }
 
 // GetTitle of the github issue
-func (g GitHubItem) GetTitle() string {
+func (g gitHubItem) GetTitle() string {
 	return g.Issue.GetTitle()
 }
 
 // GithubClientService github release service
-type GithubClientService struct {
+type githubClientService struct {
 	client *github.Client
 	ctx    context.Context
 	repo   string
@@ -39,8 +39,8 @@ type GithubClientService struct {
 }
 
 // CreateClient create client
-func CreateClient(owner, repo, token string) *GithubClientService {
-	r := GithubClientService{
+func CreateClient(owner, repo, token string) changelog.ClientService {
+	r := githubClientService{
 		repo:  repo,
 		owner: owner,
 		ctx:   context.Background(),
@@ -57,7 +57,7 @@ func CreateClient(owner, repo, token string) *GithubClientService {
 }
 
 // FindVersionIssues find issues for the release
-func (g GithubClientService) FindVersionIssues(version string, groups []*changelog.Group) {
+func (g githubClientService) FindVersionIssues(version string, groups []*changelog.Group) {
 	options := github.MilestoneListOptions{
 		State: "open",
 	}
@@ -73,7 +73,7 @@ func (g GithubClientService) FindVersionIssues(version string, groups []*changel
 		}
 	}
 	if milestone == nil {
-		fmt.Printf("Version %s not found\n", version)
+		log.Warnf("Version %s not found", version)
 		os.Exit(1)
 	}
 
@@ -87,31 +87,22 @@ func (g GithubClientService) FindVersionIssues(version string, groups []*changel
 		panic(err)
 	}
 
-	type void struct{}
-	var member void
-
 	for _, issue := range issues {
 		if issue.GetState() == "open" {
-			fmt.Printf("Warning find open issue #%d %s\n", issue.GetNumber(), issue.GetURL())
-		}
-		set := make(map[string]void)
-		for _, label := range issue.Labels {
-			set[label.GetName()] = member
+			log.Warnf("Open issue #%d %s", issue.GetNumber(), issue.GetURL())
 		}
 
+		labels := createSet(issue)
 		for _, group := range groups {
-			for _, label := range group.Labels {
-				_, exists := set[label]
-				if exists {
-					group.Items = append(group.Items, GitHubItem{Issue: issue})
-				}
+			if group.ContaintsLabels(labels) {
+				group.Items = append(group.Items, gitHubItem{Issue: issue})
 			}
 		}
 	}
 }
 
 // CreateRelease create release
-func (g GithubClientService) CreateRelease(version string, prerelease bool, output string) {
+func (g githubClientService) CreateRelease(version string, prerelease bool, output string) {
 	release := github.RepositoryRelease{
 		TagName:    &version,
 		Name:       &version,
@@ -119,4 +110,13 @@ func (g GithubClientService) CreateRelease(version string, prerelease bool, outp
 		Body:       &output,
 	}
 	g.client.Repositories.CreateRelease(g.ctx, g.owner, g.repo, &release)
+}
+
+// create set of labels
+func createSet(g *github.Issue) map[string]bool {
+	labels := make(map[string]bool)
+	for _, label := range g.Labels {
+		labels[label.GetName()] = true
+	}
+	return labels
 }
