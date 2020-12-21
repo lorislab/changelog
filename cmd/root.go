@@ -51,7 +51,7 @@ func Execute() {
 	})
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -66,11 +66,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
 }
 
-func er(msg interface{}) {
-	fmt.Println("Error:", msg)
-	os.Exit(1)
-}
-
 func initConfig() {
 	if cfgFile != "" {
 		// Use config file from the flag.
@@ -79,7 +74,7 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			er(err)
+			log.Fatal(err)
 		}
 
 		// Search config in home directory with name ".cobra" (without extension).
@@ -92,7 +87,7 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		log.Debugf("Using config file: %s", viper.ConfigFileUsed())
+		log.WithField("file", viper.ConfigFileUsed()).Debug("Using config")
 	}
 }
 

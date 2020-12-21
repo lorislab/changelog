@@ -2,7 +2,6 @@ package github
 
 import (
 	"context"
-	"os"
 	"strconv"
 
 	"github.com/google/go-github/v33/github"
@@ -58,40 +57,19 @@ func CreateClient(owner, repo, token string) changelog.ClientService {
 
 // FindVersionIssues find issues for the release
 func (g githubClientService) FindVersionIssues(version string, groups []*changelog.Group) {
-	options := github.MilestoneListOptions{
-		State: "open",
-	}
-	milestones, _, err := g.client.Issues.ListMilestones(g.ctx, g.owner, g.repo, &options)
-	if err != nil {
-		panic(err)
-	}
-	var milestone *github.Milestone
-	for _, m := range milestones {
-		if m.GetTitle() == version {
-			milestone = m
-			break
-		}
-	}
-	if milestone == nil {
-		log.Warnf("Version %s not found", version)
-		os.Exit(1)
-	}
 
+	milestone := g.findMilstone(version)
 	issueList := github.IssueListByRepoOptions{
 		Milestone: strconv.Itoa(milestone.GetNumber()),
-		State:     "all",
+		State:     "closed",
 	}
 	// check reponse for all issues
 	issues, _, err := g.client.Issues.ListByRepo(g.ctx, g.owner, g.repo, &issueList)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	for _, issue := range issues {
-		if issue.GetState() == "open" {
-			log.Warnf("Open issue #%d %s", issue.GetNumber(), issue.GetURL())
-		}
-
 		labels := createSet(issue)
 		for _, group := range groups {
 			if group.ContaintsLabels(labels) {
@@ -109,7 +87,50 @@ func (g githubClientService) CreateRelease(version string, prerelease bool, outp
 		Prerelease: &prerelease,
 		Body:       &output,
 	}
-	g.client.Repositories.CreateRelease(g.ctx, g.owner, g.repo, &release)
+	_, _, err := g.client.Repositories.CreateRelease(g.ctx, g.owner, g.repo, &release)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+// CreateRelease create release
+func (g githubClientService) CloseVersion(version string) {
+	milestone := g.findMilstone(version)
+	if milestone.ClosedAt != nil {
+		log.WithFields(log.Fields{
+			"file":    version,
+			"closeAt": milestone.GetClosedAt(),
+		}).Warn("Version is already.")
+		return
+	}
+	state := "closed"
+	milestone.State = &state
+	log.WithField("version", milestone.GetTitle()).Debug("Close milstone")
+	_, _, err := g.client.Issues.EditMilestone(g.ctx, g.owner, g.repo, milestone.GetNumber(), milestone)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (g githubClientService) findMilstone(version string) *github.Milestone {
+	options := github.MilestoneListOptions{
+		State: "open",
+	}
+	milestones, _, err := g.client.Issues.ListMilestones(g.ctx, g.owner, g.repo, &options)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var milestone *github.Milestone
+	for _, m := range milestones {
+		if m.GetTitle() == version {
+			milestone = m
+			break
+		}
+	}
+	if milestone == nil {
+		log.WithField("version", version).Fatal("No open version found")
+	}
+	return milestone
 }
 
 // create set of labels
