@@ -16,8 +16,8 @@ Create release and close version for the `github` repository `lorislab/release-n
 changelog generate --repository lorislab/release-notes --token **** --version 2.0.0 --create-release --close-version
 ```
 
-If the tool is running in the github action it will check these envrionment variables:
-* GITHUB_REF - version paremetr
+If the tool is running in the GitHub it will also check these environment variables if they are not specified:
+* GITHUB_REF - version paremeter
 * GITHUB_REPOSITORY - repository parameter
  
 
