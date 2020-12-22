@@ -16,10 +16,8 @@ import (
 var (
 	// Used for flags.
 	shortened = false
-	version   = "dev"
-	commit    = "none"
-	date      = "unknown"
 	output    = "json"
+	bv        BuildVersion
 	cfgFile   string
 	v         string
 	rootCmd   = &cobra.Command{
@@ -38,14 +36,22 @@ var (
 		Short: "Version will output the current build information",
 		Long:  ``,
 		Run: func(_ *cobra.Command, _ []string) {
-			resp := goVersion.FuncWithOutput(shortened, version, commit, date, output)
+			resp := goVersion.FuncWithOutput(shortened, bv.Version, bv.Commit, bv.Date, output)
 			fmt.Print(resp)
 		},
 	}
 )
 
+type BuildVersion struct {
+	Version string
+	Commit  string
+	Date    string
+}
+
 // Execute executes the root command.
-func Execute() {
+func Execute(version BuildVersion) {
+	bv = version
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: true,
 	})
