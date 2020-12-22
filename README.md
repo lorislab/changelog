@@ -9,12 +9,18 @@ Changelog generator
 
 Write changelog to the console for the `github` repository `lorislab/release-notes`
 ```shell script
-changelog generate --owner lorislab --repo release-notes --token **** --version 2.0.0 --console
+changelog generate --repository lorislab/release-notes --token **** --version 2.0.0 --console
 ```
 Create release and close version for the `github` repository `lorislab/release-notes`
 ```shell script
-changelog generate --owner lorislab --repo release-notes --token **** --version 2.0.0 --create-release --close-version
+changelog generate --repository lorislab/release-notes --token **** --version 2.0.0 --create-release --close-version
 ```
+
+If the tool is running in the github action it will check these envrionment variables:
+* GITHUB_REF - version paremetr
+* GITHUB_REPOSITORY - repository parameter
+ 
+
 ## Commands
 
 ```shell script
@@ -25,15 +31,14 @@ Usage:
   changelog generate [flags]
 
 Flags:
-      --close-version    close version
-      --console          write changelog to the console
-      --create-release   create release and changelog
-  -f, --file string      changelog definition (default "changelog.yaml")
-  -h, --help             help for generate
-  -w, --owner string     project owner (mandatory)
-  -r, --repo string      repository name (mandatory)
-  -t, --token string     access token
-  -e, --version string   release version (mandatory)
+      --close-version       close version
+      --console             write changelog to the console
+      --create-release      create release and changelog
+  -f, --file string         changelog definition (default "changelog.yaml")
+  -h, --help                help for generate
+  -r, --repository string   repository name (mandatory)
+  -t, --token string        access token
+  -e, --version string      release version (mandatory)
 
 Global Flags:
       --config string      config file (default is $HOME/.changelog.yaml)
@@ -41,24 +46,23 @@ Global Flags:
 ```
 Example of `changelog.yaml`
 ```yaml
-groups:
+sections:
   - title: Major changes
     labels: 
-      - "release/super-feature"
+      - "release/super-fearure"
   - title: Complete changelog
     labels: 
       - "bug"
       - "enhancement"
 template: |
   Maven dependency:
-  
   <dependency>
     <groupId>io.quarkus</groupId>
     <artifactId>quarkus-universe-bom</artifactId>
     <version>{{ .Version }}</version>
   </dependency>
-  
-  {{ range $group := .Groups }}{{ if $group.Items }}### {{ $group.GetTitle }}{{ range $item := $group.Items }}
+
+  {{ range $section := .Sections }}{{ if $section.Items }}### {{ $section.GetTitle }}{{ range $item := $section.Items }}
   * [#{{ $item.GetID }}]({{ $item.GetURL }}) - {{ $item.GetTitle }}{{ end }}{{ end }}
   {{ end }}
 ```

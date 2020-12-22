@@ -14,7 +14,7 @@ import (
 // ClientService client service
 type ClientService interface {
 	// FindVersionIssues find issues for the release
-	FindVersionIssues(version string, groups []*Group)
+	FindVersionIssues(version string, groups []*Section)
 	// CreateRelease create release
 	CreateRelease(version string, prerelease bool, output string)
 	// CloseVersion close current version
@@ -28,19 +28,19 @@ type Item interface {
 	GetTitle() string
 }
 
-// Group list of items for the label
-type Group struct {
-	Config ConfigGroup
+// Section list of items for the label
+type Section struct {
+	Config ConfigSection
 	Items  []Item
 }
 
 // GetTitle get group title
-func (c *Group) GetTitle() string {
+func (c *Section) GetTitle() string {
 	return c.Config.Title
 }
 
-// ContaintsLabels check if group containts one of the labels
-func (c *Group) ContaintsLabels(labels map[string]bool) bool {
+// ContaintsLabels check if section containts one of the labels
+func (c *Section) ContaintsLabels(labels map[string]bool) bool {
 	for _, label := range c.Config.Labels {
 		_, exists := labels[label]
 		if exists {
@@ -52,41 +52,43 @@ func (c *Group) ContaintsLabels(labels map[string]bool) bool {
 
 // Changelog main object
 type Changelog struct {
-	Version string
-	File    string
-	Groups  []*Group
-	Client  ClientService
-	Body    string
-	SemVer  semver.Version
-	Config  *Config
+	Version  string
+	File     string
+	Sections []*Section
+	Client   ClientService
+	Body     string
+	SemVer   *semver.Version
+	Config   *Config
 }
 
-// ConfigGroup changelog configuration group
-type ConfigGroup struct {
+// ConfigSection changelog configuration section
+type ConfigSection struct {
 	Title  string   `yaml:"title"`
 	Labels []string `yaml:"labels"`
 }
 
 // Config changelog configuration
 type Config struct {
-	Template string        `yaml:"template"`
-	Groups   []ConfigGroup `yaml:"groups"`
+	Template string          `yaml:"template"`
+	Sections []ConfigSection `yaml:"sections"`
 }
 
 // Init initialize changelog
 func (c *Changelog) Init() {
 	c.Config = loadConfig(c.File)
 
-	c.Groups = []*Group{}
-	for _, group := range c.Config.Groups {
-		c.Groups = append(c.Groups, &Group{Config: group, Items: []Item{}})
+	c.Sections = []*Section{}
+	for _, section := range c.Config.Sections {
+		c.Sections = append(c.Sections, &Section{Config: section, Items: []Item{}})
 	}
 
 	semVer, err := semver.NewVersion(c.Version)
 	if err != nil {
-		log.Fatal(err)
+		log.WithFields(log.Fields{
+			"version": c.Version,
+		}).Fatal(err)
 	}
-	c.SemVer = *semVer
+	c.SemVer = semVer
 }
 
 // GenerateBody generate the body of the release
@@ -110,7 +112,7 @@ func (c *Changelog) GenerateBody() {
 // FindVersionIssues find issues for the version
 func (c *Changelog) FindVersionIssues() {
 	log.WithField("version", c.Version).Info("Find issues for version")
-	c.Client.FindVersionIssues(c.Version, c.Groups)
+	c.Client.FindVersionIssues(c.Version, c.Sections)
 }
 
 // IsPrerelease returns true is the version is pre-release
@@ -156,15 +158,15 @@ func loadConfig(file string) *Config {
 	if len(config.Template) == 0 {
 		config.Template = defaultTemplate
 	}
-	// check default groups
-	if len(config.Groups) == 0 {
-		config.Groups = []ConfigGroup{{Title: "Complete changelog", Labels: []string{"bug", "enhancement"}}}
+	// check default Sections
+	if len(config.Sections) == 0 {
+		config.Sections = []ConfigSection{{Title: "Complete changelog", Labels: []string{"bug", "enhancement"}}}
 	}
 	return config
 }
 
 var (
-	defaultTemplate = `{{ range $group := .Groups }}### {{ $group.GetTitle }}{{ range $item := $group.Items }}
+	defaultTemplate = `{{ range $section := .Sections }}### {{ $section.GetTitle }}{{ range $item := $section.Items }}
 * [#{{ $item.GetID }}]({{ $item.GetURL }}) - {{ $item.GetTitle }}{{ end }}
 {{ end }}
 `

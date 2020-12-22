@@ -10,8 +10,7 @@ import (
 )
 
 type generateFlags struct {
-	Owner        string `mapstructure:"owner"`
-	Repo         string `mapstructure:"repo"`
+	Repository   string `mapstructure:"repository"`
 	Token        string `mapstructure:"token"`
 	Version      string `mapstructure:"version"`
 	File         string `mapstructure:"file"`
@@ -22,22 +21,20 @@ type generateFlags struct {
 
 func (f generateFlags) log() log.Fields {
 	return log.Fields{
-		"owner":   f.Owner,
-		"repo":    f.Repo,
-		"version": f.Version,
-		"file":    f.File,
-		"release": f.Release,
-		"close":   f.CloseVersion,
-		"output":  f.Output,
+		"repository": f.Repository,
+		"version":    f.Version,
+		"file":       f.File,
+		"release":    f.Release,
+		"close":      f.CloseVersion,
+		"output":     f.Output,
 	}
 }
 
 func init() {
 	rootCmd.AddCommand(generateCmd)
-	addFlagR(generateCmd, "owner", "w", "", "project owner")
-	addFlagR(generateCmd, "repo", "r", "", "repository name")
+	addFlag(generateCmd, "repository", "r", "", "repository name")
 	addFlag(generateCmd, "token", "t", "", "access token")
-	addFlagR(generateCmd, "version", "e", "", "release version")
+	addFlag(generateCmd, "version", "e", "", "release version")
 	addBoolFlag(generateCmd, "create-release", "", false, "create release and changelog")
 	addBoolFlag(generateCmd, "close-version", "", false, "close version")
 	addBoolFlag(generateCmd, "console", "", false, "write changelog to the console")
@@ -54,11 +51,24 @@ var generateCmd = &cobra.Command{
 		options := readGenerateFlags()
 
 		// current implementation support only github
-		client := github.CreateClient(options.Owner, options.Repo, options.Token)
+		client, version := github.Init(options.Repository, options.Token)
+
+		// replace version with a input parameter
+		if len(options.Version) > 0 {
+			version = options.Version
+		}
+
+		// check version
+		if len(version) == 0 {
+			log.WithFields(log.Fields{
+				"version":         version,
+				"options-version": options.Version,
+			}).Fatal("Version is empty!")
+		}
 
 		// create changelog base on the configuration
 		changelog := changelog.Changelog{
-			Version: options.Version,
+			Version: version,
 			File:    options.File,
 			Client:  client,
 		}
@@ -100,10 +110,6 @@ func readGenerateFlags() generateFlags {
 
 func addFlag(command *cobra.Command, name, shorthand, value, usage string) *pflag.Flag {
 	return addFlagExt(command, name, shorthand, value, usage, false)
-}
-
-func addFlagR(command *cobra.Command, name, shorthand, value, usage string) *pflag.Flag {
-	return addFlagExt(command, name, shorthand, value, usage+" (mandatory)", true)
 }
 
 func addFlagExt(command *cobra.Command, name, shorthand, value, usage string, required bool) *pflag.Flag {

@@ -2,7 +2,9 @@ package github
 
 import (
 	"context"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/google/go-github/v33/github"
 	changelog "github.com/lorislab/changelog/api"
@@ -37,26 +39,66 @@ type githubClientService struct {
 	owner  string
 }
 
-// CreateClient create client
-func CreateClient(owner, repo, token string) changelog.ClientService {
-	r := githubClientService{
-		repo:  repo,
-		owner: owner,
+// Init initialize github client and configuration
+func Init(repository, token string) (changelog.ClientService, string) {
+	if len(token) == 0 {
+		log.Fatal("Github token is mandatory")
+	}
+
+	ver := ""
+	repo := repository
+
+	// check github actions environment variables
+	log.WithFields(log.Fields{
+		"actions":    os.Getenv("GITHUB_ACTIONS"),
+		"version":    os.Getenv("GITHUB_REF"),
+		"repository": os.Getenv("GITHUB_REPOSITORY"),
+	}).Info("Github actions")
+
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		ver = os.Getenv("GITHUB_REF")
+		log.WithField("version", ver).Debug("Setup the version from GITHUB_REF env variable")
+		if len(repo) == 0 {
+			repo = os.Getenv("GITHUB_REPOSITORY")
+			log.WithField("repository", repo).Debug("Setup the version from GITHUB_REPOSITORY env variable")
+		}
+	}
+
+	// check repository
+	if len(repo) == 0 {
+		log.WithFields(log.Fields{
+			"input":   repository,
+			"current": repo,
+		}).Fatal("Repository is empty")
+	}
+
+	// create github client
+	client := createClient(repository, token)
+	return client, ver
+}
+
+func createClient(repository, token string) changelog.ClientService {
+	items := strings.Split(repository, "/")
+	if len(items) != 2 {
+		log.WithField("repository", repository).Fatal("Wrong format for the github repository owner/repo")
+	}
+	result := githubClientService{
+		owner: items[0],
+		repo:  items[1],
 		ctx:   context.Background(),
 	}
 
-	if len(token) > 0 {
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		)
-		tc := oauth2.NewClient(r.ctx, ts)
-		r.client = github.NewClient(tc)
-	}
-	return &r
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: token},
+	)
+	tc := oauth2.NewClient(result.ctx, ts)
+	result.client = github.NewClient(tc)
+
+	return &result
 }
 
 // FindVersionIssues find issues for the release
-func (g githubClientService) FindVersionIssues(version string, groups []*changelog.Group) {
+func (g githubClientService) FindVersionIssues(version string, sections []*changelog.Section) {
 
 	milestone := g.findMilstone(version)
 	issueList := github.IssueListByRepoOptions{
@@ -71,9 +113,9 @@ func (g githubClientService) FindVersionIssues(version string, groups []*changel
 
 	for _, issue := range issues {
 		labels := createSet(issue)
-		for _, group := range groups {
-			if group.ContaintsLabels(labels) {
-				group.Items = append(group.Items, gitHubItem{Issue: issue})
+		for _, section := range sections {
+			if section.ContaintsLabels(labels) {
+				section.Items = append(section.Items, gitHubItem{Issue: issue})
 			}
 		}
 	}
