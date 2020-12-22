@@ -56,7 +56,7 @@ func Init(repository, token string) (changelog.ClientService, string) {
 	}).Info("Github actions")
 
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		ver = os.Getenv("GITHUB_REF")
+		ver = strings.TrimPrefix(os.Getenv("GITHUB_REF"), "refs/tags/")
 		log.WithField("version", ver).Debug("Setup the version from GITHUB_REF env variable")
 		if len(repo) == 0 {
 			repo = os.Getenv("GITHUB_REPOSITORY")
@@ -73,7 +73,7 @@ func Init(repository, token string) (changelog.ClientService, string) {
 	}
 
 	// create github client
-	client := createClient(repository, token)
+	client := createClient(repo, token)
 	return client, ver
 }
 
