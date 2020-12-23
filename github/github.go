@@ -101,6 +101,11 @@ func createClient(repository, token string) changelog.ClientService {
 func (g githubClientService) FindVersionIssues(version string, sections []*changelog.Section) {
 
 	milestone := g.findMilstone(version)
+
+	if milestone == nil {
+		return
+	}
+
 	issueList := github.IssueListByRepoOptions{
 		Milestone: strconv.Itoa(milestone.GetNumber()),
 		State:     "closed",
@@ -138,6 +143,10 @@ func (g githubClientService) CreateRelease(version string, prerelease bool, outp
 // CreateRelease create release
 func (g githubClientService) CloseVersion(version string) {
 	milestone := g.findMilstone(version)
+	if milestone == nil {
+		log.WithField("version", version).Warn("No version to close")
+		return
+	}
 	if milestone.ClosedAt != nil {
 		log.WithFields(log.Fields{
 			"file":    version,
@@ -170,7 +179,7 @@ func (g githubClientService) findMilstone(version string) *github.Milestone {
 		}
 	}
 	if milestone == nil {
-		log.WithField("version", version).Fatal("No open version found")
+		log.WithField("version", version).Warn("No open version found")
 	}
 	return milestone
 }
