@@ -7,8 +7,8 @@ on:
       - '**'
   pull_request:
 jobs:
-  Build:
-    name: Build
+  build:
+    name: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -23,3 +23,16 @@ jobs:
         run: go build .
       - name: Tests.
         run: go test
+  docker:
+    name: Build docker image
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: GitHub Container Registry
+        run: echo "${{ secrets.CR_PAT }}" | docker login https://ghcr.io -u USERNAME --password-stdin
+      - name: Publish docker
+        run: |
+          VERSION=$(echo "$GITHUB_REF" | sed -e 's,.*/\(.*\),\1,')
+          IMAGE_ID=ghcr.io/$GITHUB_REPOSITORY:$VERSION
+          docker build -t $IMAGE_ID --build-arg VERSION=$VERSION -f docker/Dockerfile .
