@@ -33,6 +33,6 @@ jobs:
         run: echo "${{ secrets.CR_PAT }}" | docker login https://ghcr.io -u USERNAME --password-stdin
       - name: Publish docker
         run: |
-          VERSION=$(echo "$GITHUB_REF" | sed -e 's,.*/\(.*\),\1,')
-          IMAGE_ID=ghcr.io/$GITHUB_REPOSITORY:$VERSION
+          VERSION=$VERSION
+          IMAGE_ID=ghcr.io/$GITHUB_REPOSITORY:latest
           docker build -t $IMAGE_ID --build-arg VERSION=$VERSION -f docker/Dockerfile .
