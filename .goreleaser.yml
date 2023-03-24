@@ -17,6 +17,19 @@ archives:
     linux: Linux
     windows: Windows
     amd64: x86_64
+dockers:
+  - id: linux
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - '{{ if index .Env "CI" }}ghcr.io/{{ .Env.GITHUB_REPOSITORY }}{{ else }}{{ .ProjectName }}{{ end }}:{{ .Version }}'
+    build_flag_templates:
+      - "--pull"
+      - '--label=org.opencontainers.image.source={{ if index .Env "CI" }}{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY }}{{ else }}{{.ProjectName}}{{ end }}'
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
 checksum:
   name_template: 'checksums.txt'
 snapshot:
