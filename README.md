@@ -66,3 +66,8 @@ template: |
   * [#{{ $item.GetID }}]({{ $item.GetURL }}) - {{ $item.GetTitle }}{{ end }}{{ end }}
   {{ end }}
 ```
+
+### Test release packages
+```
+goreleaser release --snapshot --clean
+```
