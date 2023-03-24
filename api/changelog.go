@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"text/template"
 
@@ -144,7 +143,7 @@ func loadConfig(file string) *Config {
 		log.WithField("file", file).Debug("Configuration file does not exists.")
 	} else {
 		log.WithField("file", file).Debug("Load configuration from the file.")
-		yamlFile, err := ioutil.ReadFile(file)
+		yamlFile, err := os.ReadFile(file)
 		if err != nil {
 			log.Panic(err)
 		}
