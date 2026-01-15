@@ -1,6 +1,6 @@
 module github.com/lorislab/changelog
 
-go 1.19
+go 1.24.0
 
 require (
 	github.com/Masterminds/semver v1.5.0
@@ -11,7 +11,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.19.0
 	go.hein.dev/go-version v0.1.0
-	golang.org/x/oauth2 v0.24.0
+	golang.org/x/oauth2 v0.34.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
